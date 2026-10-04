@@ -403,16 +403,21 @@ def trigger_reminder():
 @app.route(f'/{TOKEN}', methods=['POST'])
 def webhook():
     try:
+        print(f"[WEBHOOK] POST hit at {datetime.now()} CT:{request.headers.get('content-type')}", flush=True)
         if request.headers.get('content-type') == 'application/json':
             json_string = request.get_data().decode('utf-8')
+            print(f"[WEBHOOK] data {json_string[:200]}", flush=True)
             update = telebot.types.Update.de_json(json_string)
+            print(f"[WEBHOOK] update {update}", flush=True)
             bot.process_new_updates([update])
+            print(f"[WEBHOOK] processed", flush=True)
             return 'OK', 200
+        print("[WEBHOOK] abort 403", flush=True)
         abort(403)
     except Exception as e:
         import traceback
         traceback.print_exc()
-        print(f"Webhook error: {e}")
+        print(f"Webhook error: {e}", flush=True)
         return f"ERROR: {e}", 500
 
 @app.route('/setWebhook', methods=['GET'])
