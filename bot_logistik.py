@@ -140,9 +140,11 @@ def stop_manual(message):
 
 @bot.message_handler(commands=['start'])
 def start(message):
+    print(f"[WEBHOOK] /start dari {message.chat.id}", flush=True)
     # Daftarkan chat_id pengguna/grup untuk menerima notifikasi berkala
     simpan_chat_id(message.chat.id)
     tampilkan_menu_utama(message.chat.id)
+    print(f"[WEBHOOK] /start selesai untuk {message.chat.id}", flush=True)
 
 def tampilkan_menu_utama(chat_id):
     markup = InlineKeyboardMarkup()
