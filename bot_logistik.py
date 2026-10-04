@@ -6,6 +6,7 @@ import schedule
 import time
 import threading
 from datetime import datetime
+from flask import Flask, request, abort
 
 TOKEN = os.getenv("BOT_TOKEN", '8820103343:AAEpQjFpp7PsHJucdPei-GEc_JOPILmjKt8')
 if not TOKEN:
@@ -383,12 +384,49 @@ def selesaikan_dan_cetak(chat_id):
 
     del user_data[chat_id]
 
+# --- FLASK APP UNTUK KOYEB / FLY.IO / RENDER (WEBHOOK + CRON) ---
+app = Flask(__name__)
+
+@app.route('/', methods=['GET'])
+def health():
+    return "Bot Logistik Hidup! OK", 200
+
+@app.route('/reminder', methods=['GET'])
+def trigger_reminder():
+    """Dipanggil cron-job.org tiap jam 21:00 WIB (14:00 UTC) tanpa perlu laptop hidup"""
+    picu_pengingat_malam()
+    return f"OK - Pengingat dipicu jam {datetime.now()}, antrean: {list(pengingat_aktif)}", 200
+
+@app.route(f'/{TOKEN}', methods=['POST'])
+def webhook():
+    if request.headers.get('content-type') == 'application/json':
+        json_string = request.get_data().decode('utf-8')
+        update = telebot.types.Update.de_json(json_string)
+        bot.process_new_updates([update])
+        return 'OK', 200
+    abort(403)
+
+@app.route('/setWebhook', methods=['GET'])
+def set_webhook():
+    url = request.args.get('url')
+    if not url:
+        base = request.url_root.rstrip('/')
+        url = f"{base}/{TOKEN}"
+    bot.remove_webhook()
+    result = bot.set_webhook(url=url)
+    return f"Webhook set to {url}: {result}", 200
+
 # --- MENJALANKAN THREAD DAN BOT ---
 
 if __name__ == "__main__":
-    # Menjalankan pemantau jadwal secara independen di latar belakang (background thread)
-    thread_jadwal = threading.Thread(target=jalankan_jadwal, daemon=True)
-    thread_jadwal.start()
-
-    print("Bot Logistik beserta sistem pengingat aktif...")
-    bot.infinity_polling(timeout=60, long_polling_timeout=60)
+    PORT = os.getenv("PORT")
+    if PORT:
+        thread_jadwal = threading.Thread(target=jalankan_jadwal, daemon=True)
+        thread_jadwal.start()
+        print(f"Mode WEBHOOK aktif di port {PORT}...")
+        app.run(host='0.0.0.0', port=int(PORT))
+    else:
+        thread_jadwal = threading.Thread(target=jalankan_jadwal, daemon=True)
+        thread_jadwal.start()
+        print("Mode POLLING lokal aktif...")
+        bot.infinity_polling(timeout=60, long_polling_timeout=60)
