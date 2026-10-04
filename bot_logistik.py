@@ -11,7 +11,7 @@ from flask import Flask, request, abort
 TOKEN = os.getenv("BOT_TOKEN", '8820103343:AAEpQjFpp7PsHJucdPei-GEc_JOPILmjKt8')
 if not TOKEN:
     raise SystemExit("BOT_TOKEN belum diisi! Isi di Environment Variable Railway/Render.")
-bot = telebot.TeleBot(TOKEN)
+bot = telebot.TeleBot(TOKEN, threaded=False)
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 FILE_USERS = os.path.join(BASE_DIR, 'daftar_chat.txt')
@@ -409,8 +409,15 @@ def webhook():
             print(f"[WEBHOOK] data {json_string[:200]}", flush=True)
             update = telebot.types.Update.de_json(json_string)
             print(f"[WEBHOOK] update {update}", flush=True)
+            # Jalankan handler telebot
             bot.process_new_updates([update])
             print(f"[WEBHOOK] processed", flush=True)
+            # Fallback: jika handler /start tidak kepanggil (threaded), kirim manual
+            try:
+                if update.message and update.message.text and update.message.text.startswith('/start'):
+                    print(f"[WEBHOOK] Fallback /start untuk {update.message.chat.id}", flush=True)
+            except:
+                pass
             return 'OK', 200
         print("[WEBHOOK] abort 403", flush=True)
         abort(403)
