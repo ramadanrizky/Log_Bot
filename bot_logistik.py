@@ -13,8 +13,9 @@ if not TOKEN:
     raise SystemExit("BOT_TOKEN belum diisi! Isi di Environment Variable Railway/Render.")
 bot = telebot.TeleBot(TOKEN)
 
-FILE_USERS = 'daftar_chat.txt'
-NAMA_FILE = 'LOG'
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+FILE_USERS = os.path.join(BASE_DIR, 'daftar_chat.txt')
+NAMA_FILE = os.path.join(BASE_DIR, 'LOG')
 
 user_data = {}
 
@@ -399,12 +400,18 @@ def trigger_reminder():
 
 @app.route(f'/{TOKEN}', methods=['POST'])
 def webhook():
-    if request.headers.get('content-type') == 'application/json':
-        json_string = request.get_data().decode('utf-8')
-        update = telebot.types.Update.de_json(json_string)
-        bot.process_new_updates([update])
-        return 'OK', 200
-    abort(403)
+    try:
+        if request.headers.get('content-type') == 'application/json':
+            json_string = request.get_data().decode('utf-8')
+            update = telebot.types.Update.de_json(json_string)
+            bot.process_new_updates([update])
+            return 'OK', 200
+        abort(403)
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        print(f"Webhook error: {e}")
+        return f"ERROR: {e}", 500
 
 @app.route('/setWebhook', methods=['GET'])
 def set_webhook():
